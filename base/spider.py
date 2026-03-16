@@ -5,6 +5,9 @@
 from abc import abstractmethod
 from typing import Dict, List, Optional, Any
 import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Spider:
@@ -18,7 +21,6 @@ class Spider:
         self._cache: Dict[str, Any] = {}
         self._client = httpx.Client(timeout=30.0)
         self._proxy_url: Optional[str] = None
-        self._spider_proxy_url: Optional[str] = None
 
     def init(self, extend: str = "") -> None:
         """初始化爬虫"""
@@ -95,7 +97,7 @@ class Spider:
         Returns:
             httpx.Response对象
         """
-        return self._apply_spider_proxy(url, "GET", **kwargs)
+        return self._client.request("GET", url, **kwargs)
 
     def post(self, url: str, **kwargs) -> httpx.Response:
         """
@@ -108,7 +110,7 @@ class Spider:
         Returns:
             httpx.Response对象
         """
-        return self._apply_spider_proxy(url, "POST", **kwargs)
+        return self._client.request("POST", url, **kwargs)
 
     def getProxyUrl(self) -> str:
         """
@@ -131,36 +133,3 @@ class Spider:
             self._client = httpx.Client(timeout=30.0, proxies={"http://": proxy_url, "https://": proxy_url})
         else:
             self._client = httpx.Client(timeout=30.0)
-
-    def setSpiderProxyUrl(self, spider_proxy_url: str) -> None:
-        """
-        设置爬虫代理URL（Cloudflare Worker）
-
-        Args:
-            spider_proxy_url: 爬虫代理URL
-        """
-        self._spider_proxy_url = spider_proxy_url
-
-    def _apply_spider_proxy(self, url: str, method: str = "GET", **kwargs) -> httpx.Response:
-        """
-        应用爬虫代理
-
-        Args:
-            url: 目标URL
-            method: 请求方法
-            **kwargs: 请求参数
-
-        Returns:
-            httpx.Response对象
-        """
-        if not self._spider_proxy_url:
-            return self._client.request(method, url, **kwargs)
-
-        proxy_url = f"{self._spider_proxy_url}?targetUrl={url}"
-        headers = kwargs.get('headers', {})
-        headers['User-Agent'] = headers.get('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
-        
-        if method == "POST":
-            return self._client.post(proxy_url, headers=headers, json=kwargs.get('json'), data=kwargs.get('data'))
-        else:
-            return self._client.get(proxy_url, headers=headers, params=kwargs.get('params'))

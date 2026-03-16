@@ -66,7 +66,6 @@ async def home_content(request: HomeRequest):
     try:
         spider = spider_manager.get_spider(request.key)
         
-        # 如果爬虫未加载，尝试自动加载
         if not spider:
             from app.api.config import load_spider_from_config
             spider = load_spider_from_config(request.key)
@@ -74,20 +73,8 @@ async def home_content(request: HomeRequest):
             if not spider:
                 raise HTTPException(status_code=404, detail="爬虫不存在")
 
-        # 如果需要使用代理，临时设置代理URL
-        original_proxy_url = None
-        if request.use_proxy and spider_manager.spider_proxy_url:
-            if hasattr(spider, 'setSpiderProxyUrl'):
-                original_proxy_url = spider._spider_proxy_url
-                spider.setSpiderProxyUrl(spider_manager.spider_proxy_url)
-
-        try:
-            data = spider.home_content(request.filter)
-            return {"code": 0, "data": data}
-        finally:
-            # 恢复原始代理设置
-            if original_proxy_url is not None and hasattr(spider, 'setSpiderProxyUrl'):
-                spider.setSpiderProxyUrl(original_proxy_url)
+        data = spider.home_content(request.filter)
+        return {"code": 0, "data": data}
     except HTTPException:
         raise
     except Exception as e:
@@ -122,7 +109,6 @@ async def category_content(request: CategoryRequest):
     try:
         spider = spider_manager.get_spider(request.key)
         
-        # 如果爬虫未加载，尝试自动加载
         if not spider:
             from app.api.config import load_spider_from_config
             spider = load_spider_from_config(request.key)
@@ -130,25 +116,13 @@ async def category_content(request: CategoryRequest):
             if not spider:
                 raise HTTPException(status_code=404, detail="爬虫不存在")
 
-        # 如果需要使用代理，临时设置代理URL
-        original_proxy_url = None
-        if request.use_proxy and spider_manager.spider_proxy_url:
-            if hasattr(spider, 'setSpiderProxyUrl'):
-                original_proxy_url = spider._spider_proxy_url
-                spider.setSpiderProxyUrl(spider_manager.spider_proxy_url)
-
-        try:
-            data = spider.category_content(
-                request.tid,
-                request.pg,
-                request.filter,
-                request.extend
-            )
-            return {"code": 0, "data": data}
-        finally:
-            # 恢复原始代理设置
-            if original_proxy_url is not None and hasattr(spider, 'setSpiderProxyUrl'):
-                spider.setSpiderProxyUrl(original_proxy_url)
+        data = spider.category_content(
+            request.tid,
+            request.pg,
+            request.filter,
+            request.extend
+        )
+        return {"code": 0, "data": data}
     except HTTPException:
         raise
     except Exception as e:
@@ -178,7 +152,6 @@ async def detail_content(request: DetailRequest):
     try:
         spider = spider_manager.get_spider(request.key)
         
-        # 如果爬虫未加载，尝试自动加载
         if not spider:
             from app.api.config import load_spider_from_config
             spider = load_spider_from_config(request.key)
@@ -186,51 +159,33 @@ async def detail_content(request: DetailRequest):
             if not spider:
                 raise HTTPException(status_code=404, detail="爬虫不存在")
 
-        # 如果需要使用代理，临时设置代理URL
-        original_proxy_url = None
-        if request.use_proxy and spider_manager.spider_proxy_url:
-            if hasattr(spider, 'setSpiderProxyUrl'):
-                original_proxy_url = spider._spider_proxy_url
-                spider.setSpiderProxyUrl(spider_manager.spider_proxy_url)
+        data = spider.detail_content(request.ids)
 
-        try:
-            data = spider.detail_content(request.ids)
+        if isinstance(data, dict):
+            def parse_nested_strings(obj):
+                if isinstance(obj, dict):
+                    return {k: parse_nested_strings(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [parse_nested_strings(item) for item in obj]
+                elif isinstance(obj, str):
+                    try:
+                        import json
+                        parsed = json.loads(obj)
+                        return parse_nested_strings(parsed)
+                    except:
+                        return obj
+                return obj
 
-            # 处理字符串形式的JSON数据
-            if isinstance(data, dict):
-                # 递归处理字典中的字符串值
-                def parse_nested_strings(obj):
-                    if isinstance(obj, dict):
-                        return {k: parse_nested_strings(v) for k, v in obj.items()}
-                    elif isinstance(obj, list):
-                        return [parse_nested_strings(item) for item in obj]
-                    elif isinstance(obj, str):
-                        try:
-                            import json
-                            parsed = json.loads(obj)
-                            return parse_nested_strings(parsed)
-                        except:
-                            return obj
-                    return obj
+            data = parse_nested_strings(data)
 
-                data = parse_nested_strings(data)
+        if isinstance(data, dict) and 'list' in data and len(data['list']) > 0:
+            result = data['list'][0]
+        elif isinstance(data, dict) and 'vod_id' in data:
+            result = data
+        else:
+            result = data
 
-            # 兼容不同的返回格式
-            # 1. 如果返回的是 {'list': [vod]}，取第一个元素
-            if isinstance(data, dict) and 'list' in data and len(data['list']) > 0:
-                result = data['list'][0]
-            # 2. 如果返回的是单个对象，直接使用
-            elif isinstance(data, dict) and 'vod_id' in data:
-                result = data
-            # 3. 其他情况，原样返回
-            else:
-                result = data
-
-            return {"code": 0, "data": result}
-        finally:
-            # 恢复原始代理设置
-            if original_proxy_url is not None and hasattr(spider, 'setSpiderProxyUrl'):
-                spider.setSpiderProxyUrl(original_proxy_url)
+        return {"code": 0, "data": result}
     except HTTPException:
         raise
     except Exception as e:
@@ -261,7 +216,6 @@ async def search_content(request: SearchRequest):
     try:
         spider = spider_manager.get_spider(request.key)
         
-        # 如果爬虫未加载，尝试自动加载
         if not spider:
             from app.api.config import load_spider_from_config
             spider = load_spider_from_config(request.key)
@@ -269,20 +223,8 @@ async def search_content(request: SearchRequest):
             if not spider:
                 raise HTTPException(status_code=404, detail="爬虫不存在")
 
-        # 如果需要使用代理，临时设置代理URL
-        original_proxy_url = None
-        if request.use_proxy and spider_manager.spider_proxy_url:
-            if hasattr(spider, 'setSpiderProxyUrl'):
-                original_proxy_url = spider._spider_proxy_url
-                spider.setSpiderProxyUrl(spider_manager.spider_proxy_url)
-
-        try:
-            data = spider.search_content(request.keyword, request.quick)
-            return {"code": 0, "data": data}
-        finally:
-            # 恢复原始代理设置
-            if original_proxy_url is not None and hasattr(spider, 'setSpiderProxyUrl'):
-                spider.setSpiderProxyUrl(original_proxy_url)
+        data = spider.search_content(request.keyword, request.quick)
+        return {"code": 0, "data": data}
     except HTTPException:
         raise
     except Exception as e:

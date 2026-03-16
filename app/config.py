@@ -27,9 +27,6 @@ class Settings(BaseSettings):
     # 代理配置
     PROXY_ENABLED: bool = False
     PROXY_URL: Optional[str] = None
-    
-    # 智能代理配置（Cloudflare Workers）
-    SMART_PROXY_URL: Optional[str] = None
 
     # 爬虫配置
     SPIDERS_DIR: str = "./spiders"

@@ -26,11 +26,6 @@ class SpiderManager:
         self.jar_loader = JarLoader() if JAR_SUPPORT else None
         self.spiders: Dict[str, Spider] = {}
         self.recent: Optional[str] = None
-        self.spider_proxy_url: Optional[str] = None
-        
-        # 从配置读取智能代理URL
-        if settings.SMART_PROXY_URL:
-            self.spider_proxy_url = settings.SMART_PROXY_URL
 
     def load_spider(self, key: str, path: str, spider_type: str, extend: str = "") -> Spider:
         """
@@ -58,10 +53,6 @@ class SpiderManager:
 
         # 初始化爬虫
         spider.init(extend)
-        
-        # 应用爬虫代理设置
-        if self.spider_proxy_url and hasattr(spider, 'setSpiderProxyUrl'):
-            spider.setSpiderProxyUrl(self.spider_proxy_url)
 
         # 缓存爬虫
         self.spiders[key] = spider

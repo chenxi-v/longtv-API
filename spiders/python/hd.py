@@ -26,8 +26,6 @@ from base.spider import Spider
 
 class Spider(Spider):
 
-
-
     def init(self, extend=""):
         self.session = requests.Session()
         self.headers = {
@@ -50,6 +48,9 @@ class Spider(Spider):
         self.session.proxies.update(self.proxies)
         self.session.headers.update(self.headers)
         pass
+
+    def _request(self, url, timeout=30):
+        return self.session.get(url, timeout=timeout)
 
 
 
@@ -106,7 +107,7 @@ class Spider(Spider):
 
 
     def homeContent(self, filter):
-        data=self.getpq(self.session.get(self.hsot, timeout=30))
+        data=self.getpq(self._request(self.hsot, timeout=30))
 
         cdata=data('.stui-header__menu li')
 
@@ -320,7 +321,7 @@ class Spider(Spider):
 
         print(f"[hd] categoryContent URL: {url}, tid={tid}, cate={cate}, type={type_filter}, letter={letter}")
         
-        data=self.getpq(self.session.get(url, timeout=30))
+        data=self.getpq(self._request(url, timeout=30))
         
         # 提取页数信息（格式：1/349）
         page_text = data('.stui-page .num').text() or ''
@@ -345,7 +346,7 @@ class Spider(Spider):
         url = ids[0]
         if not url.startswith('http'):
             url = f"{self.hsot}{url}"
-        data=self.getpq(self.session.get(url, timeout=30))
+        data=self.getpq(self._request(url, timeout=30))
 
         
 
@@ -446,7 +447,7 @@ class Spider(Spider):
 
 
     def searchContent(self, key, quick, pg="1"):
-        data=self.getpq(self.session.get(f"{self.hsot}/vodsearch/{key}----------{pg}---.html", timeout=30))
+        data=self.getpq(self._request(f"{self.hsot}/vodsearch/{key}----------{pg}---.html", timeout=30))
 
         return {'list':self.getlist(data('.stui-vodlist.clearfix li')),'page':pg}
 
@@ -455,11 +456,10 @@ class Spider(Spider):
     def playerContent(self, flag, id, vipFlags):
 
         try:
-
             url = id
             if not url.startswith('http'):
                 url = f"{self.hsot}{id}"
-            data=self.getpq(self.session.get(url, timeout=30))
+            data=self.getpq(self._request(url, timeout=30))
 
             jstr=data('.stui-player script').eq(0).text()
 
