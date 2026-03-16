@@ -104,13 +104,40 @@ class Spider(Spider):
 
     def detailContent(self, ids):
         vid = ids[0].replace('click', '').split('?')
+        
+        # 获取视频详情（包含名称和封面）
+        detail_path = f'/api/video/getVideoById?videoId={vid[0]}'
+        detail_data = self.fetch(f'{self.host}{detail_path}', headers=self.headers()).json()['encData']
+        detail_info = self.aes(detail_data)
+        
+        # 提取视频信息
+        video_data = detail_info.get('data', [])
+        if isinstance(video_data, list) and len(video_data) > 0:
+            video_info = video_data[0]
+            vod_name = video_info.get('title', vid[2] if len(vid) > 2 else '')
+            cover_imgs = video_info.get('coverImg', [])
+            vod_pic = self.getProxyUrl() + cover_imgs[0] if cover_imgs else ''
+        else:
+            vod_name = vid[2] if len(vid) > 2 else ''
+            vod_pic = ''
+        
+        # 获取播放地址
         path = f'/api/video/can/watch?videoId={vid[0]}'
         data = self.fetch(f'{self.host}{path}', headers=self.headers()).json()['encData']
         data1 = self.aes(data)['playPath']
+        
         clj = '[a=cr:' + json.dumps({'id': vid[1] + 'click', 'name': vid[2]}) + '/]' + vid[2] + '[/a]'
         if 'click' in ids[0]:
             clj = vid[2]
-        vod = {'vod_director': clj, 'vod_play_from': "推特", 'vod_play_url': vid[2] + "$" + data1}
+        
+        vod = {
+            'vod_id': ids[0],
+            'vod_name': vod_name,
+            'vod_pic': vod_pic,
+            'vod_director': clj, 
+            'vod_play_from': "推特", 
+            'vod_play_url': vid[2] + "$" + data1
+        }
         result = {"list": [vod]}
         return result
 
